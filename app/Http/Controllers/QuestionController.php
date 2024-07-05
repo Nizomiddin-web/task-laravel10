@@ -2,9 +2,13 @@
 
 namespace App\Http\Controllers;
 use App\Imports\QuestionsImport;
+use App\Models\OptionManual;
+use App\Models\QuizManual;
 use Illuminate\Support\Str;
 use App\Models\TestFile;
+use App\Models\TestForm;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\ResourceResponse;
 use Maatwebsite\Excel\Facades\Excel;
 
 class QuestionController extends Controller
@@ -43,4 +47,63 @@ class QuestionController extends Controller
         Excel::import(new QuestionsImport($test_file->id),$request->file('excel'));
         return ["success"=>true];
     }
+
+    public function addManual(Request $request){
+        //first create TestForm data
+        $testForm = TestForm::create([
+            'user_id'=>1,
+            'name'=>Str::random(10),
+            'type'=>'private'
+        ]);
+        //second foreach every data from $request
+        foreach($request->all() as $data){
+
+            //declareted various variables
+            $question = $data['editorContent'];
+            $options = $data['options'];
+            $switchType = $data['switchType'];
+
+            //Check answer type and set type 1 or 2
+            if ($switchType=='one answer') {
+                $switchType=1;
+            }else{
+                $switchType=2;
+                $selectedOptions = $data['selectedOptions'];
+            }
+
+            //Create new question in database
+            $quiz = QuizManual::create([
+                'test_form_id'=>$testForm->id,
+                'question'=>$question,
+                'type'=>$switchType
+            ]);
+
+
+            //Check more options or not
+            if (isset($selectedOptions)) {
+                foreach($options as $option){
+                    if (in_array($option,$selectedOptions)) {
+                        $isCorrect = true;
+                    }else{
+                        $isCorrect = false;
+                    }
+                    //Create option
+                    OptionManual::create([
+                        'quiz_manual_id'=>$quiz->id,
+                        'option'=>$option['value'],
+                        'is_correct'=>$isCorrect
+                       ]);
+                }
+            }else{
+                foreach($options as $option)
+                    OptionManual::create([
+                    'quiz_manual_id'=>$quiz->id,
+                    'option'=>$option['value'],
+                    'is_correct'=>$option['isCorrect']
+                    ]);
+            }
+        }
+        return ['success'=>true];
+    }
+
 }

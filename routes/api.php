@@ -20,3 +20,5 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 Route::post('qustion/import',[QuestionController::class,'import']);
+Route::post('qustion/create-manual',[QuestionController::class,'addManual']);
+
